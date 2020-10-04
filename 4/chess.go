@@ -2,7 +2,20 @@ package main
 
 import "fmt"
 
-// TODO: function to display board nicely
+func display(board [8][8]rune) {
+	for _, row := range board {
+		for _, column := range row {
+			if column == 0 {
+				fmt.Print(" ")
+			} else {
+				fmt.Printf("%c ", column)
+			}
+		}
+		fmt.Println()
+	}
+}
+
+// function to display board nicely
 
 func main() {
 	var board [8][8]rune
@@ -19,7 +32,7 @@ func main() {
 
 	for column := range board[1] {
 		board[1][column] = 'p'
-		board[6][column] = 'p'
+		board[6][column] = 'P'
 	}
 
 	// white pieces
@@ -36,9 +49,10 @@ func main() {
 	// board[7][6] = 'N'
 	// board[7][7] = 'R'
 
-	// TODO: function to display board nicely
-	for _, row := range board {
-		fmt.Println(row)
-	}
+	// function to display board nicely
+	display(board)
+	//for _, row := range board {
+	//	fmt.Println(row)
+	//}
 	//fmt.Print(board)
 }
