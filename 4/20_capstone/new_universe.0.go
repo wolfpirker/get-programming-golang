@@ -64,6 +64,35 @@ func (u Universe) Seed() {
 	}
 }
 
+// 20.2
+func (u Universe) Alive(x, y int) bool {
+	// Note: wrap around if the cell is outside,
+	// of universe
+	x = (x + width) % width
+	y = (y + height) % height
+	if u[x][y] {
+		return true
+	}
+	return false
+}
+
+func (u Universe) Neighbours(x, y int) int {
+	// count neighbours, using Alive method
+	count := 0
+	for x1 := x - 1; x1 <= x+1; x1++ {
+		for y1 := y - 1; y1 <= y+1; y1++ {
+			if (x1 == x) && (y1 == y) {
+				continue
+			} else {
+				if u.Alive(x1, y1) {
+					count++
+				}
+			}
+		}
+	}
+	return count
+}
+
 type Universe [][]bool // True: cell is alive, False: dead
 /* use slices instead of arrays so that a universe can be shared with,
  * and modified by functions or methods
@@ -71,7 +100,12 @@ type Universe [][]bool // True: cell is alive, False: dead
  */
 func main() {
 	// 20.1 A new universe
+	// 20.2 Implementing game rules
 	u := newUniverse()
 	u.Seed()
 	u.Show()
+	//count := u.Neighbours(-2, -2)
+	// panic: runtime error: index out of range!
+	count := u.Neighbours(1, 1)
+	println(count)
 }
