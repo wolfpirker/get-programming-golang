@@ -8,9 +8,9 @@ import (
 func countWords(text string) map[string]int {
 	words := strings.Split(text, " ")
 	frequency := make(map[string]int, len(words))
-	for _, word := range words {
-		word = strings.TrimRight(word, ",")
-		word = strings.TrimRight(word, ".")
+	for i, word := range words {
+		word = strings.Trim(word, ",. \n\t")
+		words[i] = strings.ToLower(word)
 	}
 
 	for _, t := range words {
