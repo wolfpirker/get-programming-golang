@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 const (
@@ -47,10 +48,12 @@ func (u Universe) String() string {
 func (u Universe) Seed() {
 	// set randomly around 25% of the cells to be alive
 	// see different and faster solution in the book
-	// why does it produce the same result always?
+	// Note: random, by using a variable Seed - see documentation
+	// https://golang.org/pkg/math/rand/#Intn
 	r := 0
 	for i, _ := range u {
 		for j, _ := range u[i] {
+			rand.Seed(time.Now().UnixNano())
 			r = rand.Intn(100)
 			if r < 25 {
 				u[i][j] = true
