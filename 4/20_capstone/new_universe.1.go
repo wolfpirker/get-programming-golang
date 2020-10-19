@@ -108,6 +108,16 @@ func (u Universe) Next(x, y int) bool {
 	return false
 }
 
+// 20.3 Parallel universe
+func Step(a, b Universe) {
+	// read through universe A and set cells alive in universe B
+	for i, _ := range a {
+		for j, _ := range a[i] {
+			b[i][j] = a.Next(i, j)
+		}
+	}
+}
+
 type Universe [][]bool // True: cell is alive, False: dead
 /* use slices instead of arrays so that a universe can be shared with,
  * and modified by functions or methods
@@ -118,7 +128,18 @@ func main() {
 	// 20.2 Implementing game rules
 	u := newUniverse()
 	u.Seed()
+
+	// count := u.Neighbours(-1, -1)
+	// println(count)
+	u2 := newUniverse()
+
+	for i := 1; i < 10; i++ {
+		u.Show()
+		Step(u, u2)
+		u, u2 = u2, u
+		time.Sleep(time.Second / 2)
+		println("\x0c")
+	}
+
 	u.Show()
-	count := u.Neighbours(-1, -1)
-	println(count)
 }
