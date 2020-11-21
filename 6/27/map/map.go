@@ -13,5 +13,7 @@ func main() {
 
 	for ingredient, measurement := range soup {
 		fmt.Println(ingredient, measurement)
+		fmt.Println('.')
 	}
+
 }
