@@ -42,7 +42,7 @@ func NewSudoku(digits [rows][columns] int8) *Grid {
 			}
 		}
 	}
-	return &grid // pointer
+	return &grid
 }
 
 func (g *Grid) isFixed(row int8, column int8) bool{
@@ -70,9 +70,9 @@ func (g *Grid) inColumn(column int8, digit int8) bool{
 func (g *Grid) inRegion(row int8, column int8, digit int8) bool{
 	sir := row - row % 3 // startindex row
 	sic := column - column % 3 // startindex column
-	for r := sir; r < sir+2; r++ {
-		for c := sic; c < sic+2; c++ {
-			if g[r][column].digit == digit {
+	for r := sir; r < sir+3; r++ {
+		for c := sic; c < sic+3; c++ {
+			if g[r][c].digit == digit {
 				return true
 			}
 		}		
@@ -136,7 +136,9 @@ func (g *Grid) String() string {
 		for c := 0; c < columns; c++{
 			if g[r][c].fixed {
 				output += fmt.Sprintf("%v%v,%v", color.Cyan, g[r][c].digit, color.Reset)
-			} else{
+			} else if g[r][c].digit == 0 {
+				output += fmt.Sprintf("%v%v,%v", color.Red, g[r][c].digit, color.Reset)
+			} else {
 				output += fmt.Sprintf("%v,", g[r][c].digit)
 			}
 			if c % 3 == 2 {
