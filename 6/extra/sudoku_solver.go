@@ -130,7 +130,7 @@ func validDigit(digit int8) bool {
 	return digit >= 1 && digit <= 9
 }
 
-func (g Grid) String() string {
+func (g *Grid) String() string {
 	output := ""
 	for r := 0; r < rows; r++ {
 		for c := 0; c < columns; c++{
@@ -151,6 +151,22 @@ func (g Grid) String() string {
 	return fmt.Sprintf("%v\n", output)
 }
 
+// Solve Sudoku, using max. tries per cell
+func (g *Grid) Solve() error{
+	err := error(nil)
+	for r := 0; r < rows; r++ {
+		for c := 0; c < columns; c++{
+			for i:=0 ; i <= 9 ; i++ {
+				err = g.Set(int8(r),int8(c),int8(i))
+				if ((err == nil) || (err == ErrFixed)) {
+					break
+				}					
+			}			
+		}
+	}
+	return err
+}
+
 func main() {	
 	s := NewSudoku([rows][columns] int8{
 		{0,3,0, 0,0,0, 0,0,0},
@@ -163,9 +179,9 @@ func main() {
 		{0,0,0, 4,1,9, 0,0,5},
 		{0,0,0, 0,0,0, 0,7,0},
 	})
-
 	
-	err := s.Set(7,1,7)
+	err := s.Solve()
+	
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
