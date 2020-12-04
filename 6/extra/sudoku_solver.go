@@ -137,7 +137,7 @@ func (g Grid) String() string {
 			if g[r][c].fixed {
 				output += fmt.Sprintf("%v%v,%v", color.Cyan, g[r][c].digit, color.Reset)
 			} else{
-				output += "0,"
+				output += fmt.Sprintf("%v,", g[r][c].digit)
 			}
 			if c % 3 == 2 {
 				output += fmt.Sprintf("|")
@@ -163,7 +163,9 @@ func main() {
 		{0,0,0, 4,1,9, 0,0,5},
 		{0,0,0, 0,0,0, 0,7,0},
 	})
-	err := s.Set(7,2,3)
+
+	
+	err := s.Set(7,1,7)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
