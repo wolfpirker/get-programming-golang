@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 	"./color"
 )
 
@@ -153,20 +152,41 @@ func (g *Grid) String() string {
 	return fmt.Sprintf("%v\n", output)
 }
 
-// Solve Sudoku, using max. tries per cell
-func (g *Grid) Solve() error{
-	err := error(nil)
+func (g *Grid) hasEmptyCell() bool {
 	for r := 0; r < rows; r++ {
 		for c := 0; c < columns; c++{
-			for i:=0 ; i <= 9 ; i++ {
-				err = g.Set(int8(r),int8(c),int8(i))
-				if ((err == nil) || (err == ErrFixed)) {
-					break
-				}					
-			}			
+			if g[r][c].digit == 0 {
+				return true
+			}
 		}
 	}
-	return err
+	return false
+}
+
+// Backtrack Sudoku (Solver algorithm)
+func (g *Grid) Backtrack() bool {
+	if !g.hasEmptyCell() {
+		return true
+	}
+	for r := 0; r < 9; r++ {
+		for c := 0; c < 9; c++ {
+			if g[r][c].digit == 0 {
+				for candidate := 9; candidate >= 1; candidate-- {
+					err := g.Set(int8(r), int8(c), int8(candidate))
+					if err == nil {
+						if g.Backtrack() {
+							return true
+						}
+						g[r][c].digit = 0
+					} else {
+						g[r][c].digit = 0
+					}
+				}
+				return false
+			}
+		}
+	}
+	return false
 }
 
 func main() {	
@@ -182,12 +202,7 @@ func main() {
 		{0,0,0, 0,0,0, 0,7,0},
 	})
 	
-	err := s.Solve()
-	
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	s.Backtrack()
 
 	fmt.Println(s)
 }
