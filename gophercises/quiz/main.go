@@ -1,11 +1,12 @@
 package main
 
 import (
-	"flag"
+	"flag" // command-line flag parsing
 	"fmt"
 	"os"
 	"encoding/csv"
 	"strings"
+	"time"
 )
 
 type problem struct {
@@ -15,6 +16,10 @@ type problem struct {
 
 func main() {
 	csvFilename := flag.String("csv", "problem.csv", "a csv file in the format of 'question, answer'")
+
+	// see documentation https://golang.org/pkg/time/#Timer
+	// ticker similar to timer, but timer fires just once
+	timeLimit := flag.Int("limit", 30, "the time limit for the quiz in seconds")
 	flag.Parse()
 	
 
@@ -29,18 +34,28 @@ func main() {
 	}
 	problems := parseLines(lines)
 
+	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)	
+
 	correct := 0
 	
 	for i, p := range problems {
 		// could be broke up into another function, minute 17 part 1
-		fmt.Printf("Problem #%d: %s = \n", i+1, p.q)
-		var answer string
-		fmt.Scanf("%s\n", &answer)
-		if answer == p.a {
-			correct++
+		select {
+		case  <-timer.C:
+			fmt.Printf("You score %d out of %d\n", correct, len(problems))
+			return
+		default:
+			fmt.Printf("Problem #%d: %s = \n", i+1, p.q)
+			var answer string
+			fmt.Scanf("%s\n", &answer)
+			if answer == p.a {
+				correct++
+			}
 		}
+
+
 	}
-	fmt.Printf("You score %d out of %d\n", correct, len(problems))
+
 }
 
 func parseLines(lines [][]string) []problem {
