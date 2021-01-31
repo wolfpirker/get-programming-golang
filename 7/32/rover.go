@@ -1,16 +1,21 @@
 package main
 
 import (
-	"image"
 	"log"
 	"math/rand"
 	"sync"
 	"time"
 )
 
-var num_rover int
+// Message sent from Mars to Earth
+type Message struct {
+	Pos  cord
+	Life int
+	Rid  int // rover id
+}
 
 type cell struct {
+	life     int // rand number between 0-1000
 	occupied bool
 }
 
@@ -29,19 +34,19 @@ type MarsGrid struct {
 }
 
 // Occupy occupies a cell at the given point
-func (g *MarsGrid) Occupy(p image.Point) *Occupier {
+func (g *MarsGrid) Occupy(p cord) *Occupier {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	occ := &Occupier{
 		grid: g,
-		pos:  p,
+		Pos:  p,
 	}
 	if occ == nil {
 		return nil
 	}
 	occ = &Occupier{
 		grid: g,
-		pos:  p,
+		Pos:  p,
 	}
 	return occ
 }
@@ -49,26 +54,45 @@ func (g *MarsGrid) Occupy(p image.Point) *Occupier {
 // Occupier represents a occupied cell in the grid
 type Occupier struct {
 	grid *MarsGrid
-	pos  image.Point
+	Pos  cord
+}
+
+// Size returns a Point representing the size of the grid
+func (g *MarsGrid) Size() cord {
+	return cord{X: g.bounds.X, Y: g.bounds.Y}
+}
+
+func startDriver(id int, grid *MarsGrid) *RoverDriver {
+	var o *Occupier
+	// get a random point, continue until one is
+	// found which is not occupied
+	for o == nil {
+		startPoint := cord{X: rand.Intn(grid.Size().X), Y: rand.Intn(grid.Size().Y)}
+		o = grid.Occupy(startPoint)
+	}
+	return NewRoverDriver(id, o)
 }
 
 // Move moves the occupier to a different cell in the grid
 // reports back whether the move was successful
 // could fail due to moving out of the grid or
 // cell already occupied - for fail: occupier stay at pos.
-func (g *Occupier) Move(p image.Point) bool {
+func (g *Occupier) MoveTo(p cord) bool {
 	g.grid.mu.Lock()
 	defer g.grid.mu.Unlock()
 
-	if p.X < 0 || p.X > g.grid.bounds.X || p.Y < 0 || p.Y > g.grid.bounds.Y {
-		return false
-	} else if g.grid.grid[p.X][p.Y].occupied {
-		return false
-	}
-	// unoccupy current position
-	g.grid.grid[p.X][p.Y].occupied = false
-	g.pos = p
-	g.grid.grid[p.X][p.Y].occupied = true
+	// FIXME!
+	// PANIC: index out of range!
+	// if p.X < 0 || p.X > g.grid.bounds.X || p.Y < 0 || p.Y > g.grid.bounds.Y {
+	// 	return false
+	// } else if g.grid.grid[p.X][p.Y].occupied {
+	// 	return false
+	// }
+	// // unoccupy current position
+	// g.grid.grid[p.X][p.Y].occupied = false
+	// g.Pos = p
+	// g.grid.grid[p.X][p.Y].occupied = true
+
 	return true
 }
 
@@ -76,47 +100,34 @@ func NewMarsGrid(size int) *MarsGrid {
 	c := cord{X: size, Y: size}
 	g := &MarsGrid{
 		bounds: c,
-		grid:   make([][]cell, size+1),
+		grid:   make([][]cell, c.Y+1),
 	}
 	return g
 }
 
 func main() {
-	grid := NewMarsGrid(24)
-
-	num_rover = 1
-	r1 := NewRoverDriver(grid)
-	r1.Left()
-	time.Sleep(2 * time.Second)
-	r2 := NewRoverDriver(grid)
-	r2.RandMove()
-	time.Sleep(time.Second)
-	r3 := NewRoverDriver(grid)
-	r3.RandMove()
-	time.Sleep(time.Second)
-	r2.RandMove()
-	r1.Stop()
-	time.Sleep(2 * time.Second)
-	r3.RandMove()
-	r1.Start()
-	time.Sleep(time.Second)
-	r1.Right()
-	time.Sleep(3 * time.Second)
+	grid := NewMarsGrid(15)
+	rover := make([]*RoverDriver, 3)
+	for i := range rover {
+		rover[i] = startDriver(i, grid)
+	}
+	time.Sleep(60 * time.Second)
 }
 
 // RoverDriver drives a rover around the surface of Mars.
 type RoverDriver struct {
 	id       int
 	commandc chan command
+	occupier *Occupier
 }
 
 // NewRoverDriver starts a new RoverDriver and returns it.
-func NewRoverDriver(g *MarsGrid) *RoverDriver {
+func NewRoverDriver(n int, o *Occupier) *RoverDriver {
 	r := &RoverDriver{
-		id:       num_rover,
+		id:       n,
 		commandc: make(chan command),
+		occupier: o,
 	}
-	num_rover += 1
 	go r.drive()
 	return r
 }
@@ -129,57 +140,57 @@ const (
 	start     = command(2)
 	stop      = command(3)
 	rand_move = command(4)
+	send_msg  = command(5)
 )
 
 // drive is responsible for driving the rover. It
 // is expected to be started in a goroutine.
 func (r *RoverDriver) drive() {
-	pos := image.Point{X: 0, Y: 0}
-	direction := image.Point{X: 1, Y: 0}
+	direction := cord{X: 1, Y: 0}
 	updateInterval := 250 * time.Millisecond
-	prev_cmnd := right
 	nextMove := time.After(updateInterval)
 	for {
 		select {
 		case c := <-r.commandc:
 			switch c {
 			case right:
-				direction = image.Point{
+				direction = cord{
 					X: -direction.Y,
 					Y: direction.X,
 				}
-				prev_cmnd = right
 			case left:
-				direction = image.Point{
+				direction = cord{
 					X: direction.Y,
 					Y: -direction.X,
 				}
-				prev_cmnd = left
-			case start:
-				prev_cmnd = start
-			case stop:
-				prev_cmnd = stop
-			case rand_move:
-				prev_cmnd = command(rand.Intn(2))
 			}
 
-			if (prev_cmnd == left) || (prev_cmnd == right) {
-				log.Println("rover", r.id, " new direction ", direction)
-			} else if prev_cmnd == stop {
-				log.Println("rover", r.id, " stopped")
-			} else if prev_cmnd == start {
-				log.Println("rover", r.id, " started")
-			}
-
+			log.Printf("%v new direction %v", r.id, direction)
 		case <-nextMove:
-			pos = pos.Add(direction)
-			if (prev_cmnd == left) || (prev_cmnd == right) {
-				log.Println(r.id, " moved to ", pos)
-			}
-
 			nextMove = time.After(updateInterval)
+			newPos := r.occupier.Pos.Add(direction)
+			if r.occupier.MoveTo(newPos) {
+				log.Printf("%v moved to %v", r.id, newPos)
+				break
+			}
+			log.Printf("%v blocked trying to move from %v to %v", r.id, r.occupier.Pos, newPos)
+			// Pick one other direction randomly
+			// next cycle try to move in the new direction
+			dir := rand.Intn(3) + 1
+			for i := 0; i < dir; i++ {
+				direction = cord{
+					X: -direction.Y,
+					Y: direction.X,
+				}
+			}
+			log.Printf("%v new random direction %v", r.id, direction)
+
 		}
 	}
+}
+
+func (c *cord) Add(d cord) cord {
+	return cord{X: c.X + d.X, Y: c.Y + d.Y}
 }
 
 // Left turns the rover left (90° counterclockwise).
