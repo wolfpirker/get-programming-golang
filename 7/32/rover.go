@@ -15,8 +15,8 @@ type Message struct {
 }
 
 type cell struct {
-	life     int // rand number between 0-1000
-	occupied bool
+	life       int // rand number between 0-1000
+	isOccupied bool
 }
 
 type cord struct {
@@ -38,23 +38,17 @@ func (g *MarsGrid) Occupy(p cord) *Occupier {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	occ := &Occupier{
-		grid: g,
-		Pos:  p,
+		mgrid: g,
+		Pos:   p,
 	}
 	if occ == nil {
 		return nil
 	}
 	occ = &Occupier{
-		grid: g,
-		Pos:  p,
+		mgrid: g,
+		Pos:   p,
 	}
 	return occ
-}
-
-// Occupier represents a occupied cell in the grid
-type Occupier struct {
-	grid *MarsGrid
-	Pos  cord
 }
 
 // Size returns a Point representing the size of the grid
@@ -77,21 +71,23 @@ func startDriver(id int, grid *MarsGrid) *RoverDriver {
 // reports back whether the move was successful
 // could fail due to moving out of the grid or
 // cell already occupied - for fail: occupier stay at pos.
-func (g *Occupier) MoveTo(p cord) bool {
-	g.grid.mu.Lock()
-	defer g.grid.mu.Unlock()
-
-	// FIXME!
-	// PANIC: index out of range!
-	// if p.X < 0 || p.X > g.grid.bounds.X || p.Y < 0 || p.Y > g.grid.bounds.Y {
-	// 	return false
-	// } else if g.grid.grid[p.X][p.Y].occupied {
-	// 	return false
-	// }
-	// // unoccupy current position
-	// g.grid.grid[p.X][p.Y].occupied = false
-	// g.Pos = p
-	// g.grid.grid[p.X][p.Y].occupied = true
+func (o *Occupier) MoveTo(p cord) bool {
+	o.mgrid.mu.Lock()
+	defer o.mgrid.mu.Unlock()
+	println("ta.")
+	outOfBounds := (p.X >= o.mgrid.bounds.X) || (p.X < 0) || (p.Y >= o.mgrid.bounds.Y) || (p.Y < 0)
+	if outOfBounds {
+		return false
+	}
+	// Note: Panic if outOfBounds was not checked before that!
+	newCell := o.mgrid.grid[p.X][p.Y]
+	if newCell.isOccupied {
+		return false
+	}
+	// unoccupy current position
+	o.mgrid.grid[p.X][p.Y].isOccupied = false
+	o.Pos = p
+	o.mgrid.grid[p.X][p.Y].isOccupied = true
 
 	return true
 }
@@ -100,7 +96,16 @@ func NewMarsGrid(size int) *MarsGrid {
 	c := cord{X: size, Y: size}
 	g := &MarsGrid{
 		bounds: c,
-		grid:   make([][]cell, c.Y+1),
+		grid:   make([][]cell, size),
+	}
+	for y := range g.grid {
+		// array initialization is important!
+		g.grid[y] = make([]cell, size)
+		//for x := range g.grid[y] {
+		//	cell := &g.grid[y][x]
+		//	// LifeSigns
+		//}
+
 	}
 	return g
 }
@@ -119,6 +124,12 @@ type RoverDriver struct {
 	id       int
 	commandc chan command
 	occupier *Occupier
+}
+
+// Occupier represents a occupied cell in the grid
+type Occupier struct {
+	mgrid *MarsGrid
+	Pos   cord
 }
 
 // NewRoverDriver starts a new RoverDriver and returns it.
@@ -146,6 +157,7 @@ const (
 // drive is responsible for driving the rover. It
 // is expected to be started in a goroutine.
 func (r *RoverDriver) drive() {
+	log.Printf("%v initial position %v", r.id, r.occupier.Pos)
 	direction := cord{X: 1, Y: 0}
 	updateInterval := 250 * time.Millisecond
 	nextMove := time.After(updateInterval)
