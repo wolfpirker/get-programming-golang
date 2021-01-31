@@ -74,7 +74,6 @@ func startDriver(id int, grid *MarsGrid) *RoverDriver {
 func (o *Occupier) MoveTo(p cord) bool {
 	o.mgrid.mu.Lock()
 	defer o.mgrid.mu.Unlock()
-	println("ta.")
 	outOfBounds := (p.X >= o.mgrid.bounds.X) || (p.X < 0) || (p.Y >= o.mgrid.bounds.Y) || (p.Y < 0)
 	if outOfBounds {
 		return false
