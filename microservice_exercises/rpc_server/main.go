@@ -3,27 +3,45 @@ package main
 // Youtube Turoial: 
 // Tensor Programming: Building a Basic RPC Server and Client with Go
 
+/* 5:20: rpc libraries, requires the following for functions:
+ * > should be methods 
+ * > each need to be exported -> Uppercase letters
+ * > two arguments -> both of which are exported (upper case)
+ * > return types should be an error type
+ */
+
 import (
-	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
 )
 
 
 type Item struct {
-	title string
-	body string
+	Title string
+	Body string
 }
+
+type API int
 
 var database []Item
 
-func GetByName(title string) Item{
+func (a *API) GetDB(empty string, reply *[]Item) error {
+	*reply = database
+	return nil
+}
+
+func (a *API) GetByName(title string, reply *Item) error {
 	var getItem Item
-	
+
 	for _, val := range database {
-		if val.title == title {
+		if val.Title == title {
 			getItem = val
 		}
 	}
-	return getItem
+	*reply = getItem
+	return nil
 }
 
 func CreateItem(item Item) Item {
@@ -31,55 +49,59 @@ func CreateItem(item Item) Item {
 	return item
 }
 
-func AddItem(item Item) Item {
+func (a *API) AddItem(item Item, reply *Item) error {
 	database = append(database, item)
-	return item
+	*reply = item
+	return nil
 }
 
-func EditItem(title string, edit Item) Item {
+func (a *API) EditItem(item Item, reply *Item) error {
 	var changed Item
 
 	for idx, val := range database {
-		if val.title == edit.title {
-			database[idx] = edit
-			changed = edit
+		if val.Title == item.Title {
+			database[idx] = Item{item.Title, item.Body}
+			changed = database[idx]
 		}
 	}
-	return changed
+
+	*reply = changed
+	return nil
 }
 
-func DeleteItem(item Item) Item {
+func (a *API) DeleteItem(item Item, reply *Item) error {
 	var del Item
 
 	for idx, val := range database {
-		if val.title == item.title && val.body == item.body {
-			// create new database without the item we want to be removed
+		if val.Title == item.Title && val.Body == item.Body {
 			database = append(database[:idx], database[idx+1:]...)
 			del = item
 			break
 		}
 	}
 
-	return del
+	*reply = del
+	return nil
 }
+
 func main() {
-	fmt.Println("initial database: ", database)
-	a := Item{"1st", "a test item"}
-	b := Item{"2nd", "a second item"}
-	c := Item{"3rd", "a third item"}
-	
-	AddItem(a)
-	AddItem(b)
-	AddItem(c)
-	fmt.Println("2nd database: ", database)
+	api := new(API)
+	err := rpc.Register(api)
+	if err != nil {
+		log.Fatal("error registering API", err)
+	}
 
-	DeleteItem(b)
-	fmt.Println("3rd database: ", database)
+	rpc.HandleHTTP()
 
-	EditItem("3rd", Item{"fourth", "a new item"})
-	fmt.Println("4th database: ", database)
+	listener, err := net.Listen("tcp", ":4040")
 
-	x := GetByName("4th")
-	y := GetByName("1st")
-	fmt.Println(x, y)
+	if err != nil {
+		log.Fatal("Listener error", err)
+	}
+	log.Printf("serving rpc on port %d", 4040)
+	http.Serve(listener, nil)
+
+	if err != nil {
+		log.Fatal("error serving: ", err)
+	}
 }
